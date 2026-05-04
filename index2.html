@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>반려동물 통합 관리 대시보드</title>
+    <!-- 폰트어썸 (아이콘) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 구글 폰트 (고운 돋움: 얇고 둥글고 깔끔한 폰트) -->
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+    <!-- Chart.js (차트 라이브러리) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --main-mint: #A8E6CF; --main-lime: #90EE90;
+            --dark-green: #2E7D32; --bg-color: #F4F9F4;
+            --card-bg: #FFFFFF; --text-main: #333333;
+            --text-light: #666666; --shadow: 0 8px 25px rgba(46, 125, 50, 0.08);
+            --radius: 15px; --transition: all 0.3s ease;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* 폰트 적용 및 두께 얇게 조정 */
+        body, input, select, button { font-family: 'Gowun Dodum', sans-serif; font-weight: 400; }
+        body { background-color: var(--bg-color); color: var(--text-main); line-height: 1.6; padding: 20px; font-size: 1.05rem; }
+        
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; padding: 10px 0; }
+        header h1 { color: var(--dark-green); font-size: 2.2rem; margin-bottom: 5px; font-weight: bold; }
+        header p { color: var(--text-light); font-size: 1.1rem; }
+        
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 25px; }
+        .card { background-color: var(--card-bg); border-radius: var(--radius); padding: 25px; box-shadow: var(--shadow); margin-bottom: 25px; }
+        .card-title { color: var(--dark-green); font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid var(--main-mint); padding-bottom: 10px; }
+        
+        input[type="text"], input[type="number"], select { width: 100%; padding: 10px 15px; margin-bottom: 15px; border: 2px solid #eee; border-radius: 8px; outline: none; font-size: 1rem; transition: var(--transition); }
+        input:focus, select:focus { border-color: var(--main-lime); }
+        
+        .btn { background-color: var(--dark-green); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1.05rem; transition: var(--transition); width: 100%; font-family: 'Gowun Dodum', sans-serif;}
+        .btn:hover { background-color: #1b5e20; transform: translateY(-2px); }
+
+        /* 프로필 */
+        .profile-img-container { text-align: center; margin-bottom: 20px; }
+        .profile-img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--main-mint); cursor: pointer; transition: var(--transition); }
+        .profile-img:hover { border-color: var(--main-lime); opacity: 0.8; }
+        #file-upload { display: none; }
+        
+        /* 투두 리스트 */
+        .todo-input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .todo-input-group input { margin-bottom: 0; }
+        .todo-list { list-style: none; }
+        .todo-item { display: flex; align-items: center; padding: 10px; background-color: var(--bg-color); border-radius: 8px; margin-bottom: 10px; }
+        .todo-item input[type="checkbox"] { margin-right: 15px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--dark-green); }
+        .todo-item.done span { text-decoration: line-through; color: #999; }
+        .delete-btn { margin-left: auto; color: #ff5252; cursor: pointer; }
+
+        /* 건강 체크 */
+        .health-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
+        .health-card { background-color: var(--bg-color); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--main-mint); }
+        .health-card i { font-size: 1.8rem; color: var(--dark-green); margin-bottom: 5px; }
+        .health-card .value { font-size: 1.3rem; font-weight: bold; color: var(--dark-green); }
+
+        /* 달력 */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .calendar-header button { background: none; border: none; font-size: 1.5rem; color: var(--dark-green); cursor: pointer; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+        .calendar-day-name { font-weight: bold; color: var(--dark-green); padding: 10px 0; }
+        
+        /* 달력 칸 (일정 여러 개 들어갈 수 있도록 스크롤 추가) */
+        .calendar-day { padding: 5px; background-color: #fafafa; border-radius: 8px; cursor: pointer; min-height: 100px; max-height: 120px; display: flex; flex-direction: column; align-items: center; transition: var(--transition); border: 1px solid transparent; overflow-y: auto; }
+        .calendar-day::-webkit-scrollbar { width: 4px; }
+        .calendar-day::-webkit-scrollbar-thumb { background-color: var(--main-mint); border-radius: 4px; }
+        .calendar-day:hover { border-color: var(--main-mint); background-color: var(--bg-color); }
+        .calendar-day.today { background-color: var(--main-lime); font-weight: bold; border-color: var(--dark-green); }
+        
+        .event-tag { background-color: var(--main-mint); color: var(--dark-green); font-size: 0.8rem; padding: 3px 6px; border-radius: 4px; margin-top: 4px; width: 95%; text-align: left; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+        
+        /* 모달창 */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; visibility: hidden; opacity: 0; }
+        .modal-overlay.active { visibility: visible; opacity: 1; }
+        .modal-content { background-color: white; padding: 30px; border-radius: var(--radius); width: 90%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        /* 모달 내 일정 리스트 */
+        .event-list-container { border-top: 1px dashed #ccc; padding-top: 15px; margin-top: 15px; }
+        .event-list { list-style: none; max-height: 200px; overflow-y: auto; }
+        .event-list::-webkit-scrollbar { width: 5px; }
+        .event-list::-webkit-scrollbar-thumb { background-color: #ddd; border-radius: 4px; }
+        .event-item { background: var(--bg-color); padding: 10px 15px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--main-mint); font-size: 0.95rem; }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .health-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1><i class="fa-solid fa-paw"></i> 반려동물 푸른 일상 대시보드</h1>
+            <p>우리아이 건강과 일정을 한눈에! 🌿</p>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- 왼쪽 열 -->
+            <div class="left-col">
+                <!-- 프로필 (자동저장) -->
+                <div class="card">
+                    <h2 class="card-title"><i class="fa-solid fa-id-badge"></i> 마이 펫 프로필</h2>
+                    <div class="profile-img-container">
+                        <label for="file-upload">
+                            <img src="https://via.placeholder.com/120/A8E6CF/2E7D32?text=사진+등록" alt="Profile" class="profile-img" id="profile-preview">
+                        </label>
+                        <input type="file" id="file-upload" accept="image/*">
+                    </div>
+                    <input type="text" id="pet-name" placeholder="이름을 입력하세요" onchange="saveProfile()">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="pet-age" placeholder="나이 (살)" onchange="saveProfile()">
+                        <select id="pet-gender" onchange="saveProfile()">
+                            <option value="">성별</option>
+                            <option value="남아">남아</option>
+                            <option value="여아">여아</option>
+                        </select>
+                    </div>
+                    <input type="text" id="pet-breed" placeholder="품종을 입력하세요" onchange="saveProfile()">
+                    <p style="text-align: center; font-size: 0.85rem; color: #888;">* 정보를 입력하면 자동 저장됩니다.</p>
+                </div>
+
+                <!-- 영양제 투두리스트 -->
+                <div class="card">
+                    <h2 class="card-title"><i class="fa-solid fa-pills"></i> 영양제 & 케어 To-Do</h2>
+                    <div class="todo-input-group">
+                        <input type="text" id="todo-input" placeholder="급여할 영양제를 입력하세요" onkeypress="if(event.key === 'Enter') addTodo()">
+                        <button class="btn" style="width: auto;" onclick="addTodo()"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    <ul class="todo-list" id="todo-list"></ul>
+                </div>
+            </div>
+
+            <!-- 오른쪽 열 -->
+            <div class="right-col">
+                <!-- 건강 기록 폼 -->
+                <div class="card">
+                    <h2 class="card-title"><i class="fa-solid fa-heart-pulse"></i> 오늘의 건강 기록 (Trend Tracker)</h2>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="number" id="input-walk" placeholder="산책 (분)">
+                        <input type="number" id="input-food" placeholder="식사량 (g)">
+                        <select id="input-potty">
+                            <option value="양호">대소변: 양호 🟢</option>
+                            <option value="보통">대소변: 보통 🟡</option>
+                            <option value="주의">대소변: 주의 🔴</option>
+                        </select>
+                        <button class="btn" style="width: auto; white-space: nowrap;" onclick="saveHealth()">기록 저장</button>
+                    </div>
+                    <div class="health-grid">
+                        <div class="health-card">
+                            <i class="fa-solid fa-person-walking-with-dog"></i><br>오늘 산책<br><span class="value" id="display-walk">0분</span>
+                        </div>
+                        <div class="health-card">
+                            <i class="fa-solid fa-bowl-food"></i><br>오늘 식사<br><span class="value" id="display-food">0g</span>
+                        </div>
+                        <div class="health-card">
+                            <i class="fa-solid fa-poop"></i><br>대소변 상태<br><span class="value" id="display-potty">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 주간 건강 차트 -->
+                <div class="card">
+                    <h2 class="card-title"><i class="fa-solid fa-chart-line"></i> 최근 7일 건강 리포트</h2>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div style="flex: 2; min-width: 250px; height: 250px; position: relative;">
+                            <canvas id="lineChart"></canvas>
+                        </div>
+                        <div style="flex: 1; min-width: 150px; height: 250px; position: relative;">
+                            <canvas id="doughnutChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 일정 달력 -->
+                <div class="card">
+                    <h2 class="card-title"><i class="fa-regular fa-calendar-days"></i> 나의 펫 일정 관리</h2>
+                    <div class="calendar-header">
+                        <button onclick="prevMonth()"><i class="fa-solid fa-chevron-left"></i></button>
+                        <h3 id="calendar-month-year" style="color: var(--dark-green); font-size:1.3rem; font-weight:bold;">2023년 10월</h3>
+                        <button onclick="nextMonth()"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-grid">
+                        <div class="calendar-day-name">일</div><div class="calendar-day-name">월</div>
+                        <div class="calendar-day-name">화</div><div class="calendar-day-name">수</div>
+                        <div class="calendar-day-name">목</div><div class="calendar-day-name">금</div>
+                        <div class="calendar-day-name">토</div>
+                    </div>
+                    <div class="calendar-grid" id="calendar-body"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 일정 관리 모달창 -->
+    <div class="modal-overlay" id="event-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-date-title" style="color: var(--dark-green); font-weight:bold;">날짜</h3>
+                <i class="fa-solid fa-times close-modal" onclick="closeModal()" style="cursor:pointer; font-size:1.5rem; color:#888;"></i>
+            </div>
+            
+            <!-- 1. 새로운 일정 추가 -->
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="event-input" placeholder="새로운 일정 입력 (예: 예방접종)" onkeypress="if(event.key === 'Enter') saveEvent()">
+                <button class="btn" style="width: auto; white-space: nowrap;" onclick="saveEvent()">추가</button>
+            </div>
+            
+            <!-- 2. 기존 일정 목록 (분리하여 명확하게 표시) -->
+            <div class="event-list-container">
+                <h4 style="color: var(--dark-green); margin-bottom: 10px; font-size: 1.05rem;"><i class="fa-solid fa-list-check"></i> 등록된 일정 목록</h4>
+                <ul class="event-list" id="event-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 상태 변수
+        let currentDate = new Date();
+        let selectedDateStr = "";
+        let lineChartInstance = null;
+        let doughnutChartInstance = null;
+        
+        let todos = JSON.parse(localStorage.getItem('petTodos')) ||[];
+        let events = JSON.parse(localStorage.getItem('petEvents')) || {};
+        let healthHistory = JSON.parse(localStorage.getItem('petHealthHistory')) || {};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Chart.defaults.font.family = "'Gowun Dodum', sans-serif"; // 차트 폰트도 통일
+            loadProfile();
+            renderTodos();
+            renderCalendar();
+            loadTodayHealth();
+            drawCharts();
+
+            // 프로필 이미지 자동 저장
+            document.getElementById('file-upload').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        document.getElementById('profile-preview').src = evt.target.result;
+                        saveProfile(); 
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+
+        /* --- 프로필 --- */
+        function saveProfile() {
+            const profileData = {
+                img: document.getElementById('profile-preview').src,
+                name: document.getElementById('pet-name').value,
+                age: document.getElementById('pet-age').value,
+                gender: document.getElementById('pet-gender').value,
+                breed: document.getElementById('pet-breed').value
+            };
+            localStorage.setItem('petProfile', JSON.stringify(profileData));
+        }
+
+        function loadProfile() {
+            const data = JSON.parse(localStorage.getItem('petProfile'));
+            if (data) {
+                if(!data.img.includes('placeholder')) document.getElementById('profile-preview').src = data.img;
+                document.getElementById('pet-name').value = data.name || '';
+                document.getElementById('pet-age').value = data.age || '';
+                document.getElementById('pet-gender').value = data.gender || '';
+                document.getElementById('pet-breed').value = data.breed || '';
+            }
+        }
+
+        /* --- 건강 체크 & 차트 --- */
+        function getTodayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function saveHealth() {
+            const walk = document.getElementById('input-walk').value || 0;
+            const food = document.getElementById('input-food').value || 0;
+            const potty = document.getElementById('input-potty').value;
+            healthHistory[getTodayStr()] = { walk, food, potty };
+            localStorage.setItem('petHealthHistory', JSON.stringify(healthHistory));
+            
+            document.getElementById('input-walk').value = '';
+            document.getElementById('input-food').value = '';
+            
+            loadTodayHealth();
+            drawCharts(); 
+        }
+
+        function loadTodayHealth() {
+            const data = healthHistory[getTodayStr()];
+            if (data) {
+                document.getElementById('display-walk').innerText = data.walk + '분';
+                document.getElementById('display-food').innerText = data.food + 'g';
+                document.getElementById('display-potty').innerText = data.potty;
+            }
+        }
+
+        function drawCharts() {
+            const days = [], walkData =[], foodData =[];
+            let pGood = 0, pNormal = 0, pBad = 0;
+
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                days.push(`${d.getMonth()+1}/${d.getDate()}`);
+                
+                if(healthHistory[dateStr]) {
+                    walkData.push(healthHistory[dateStr].walk);
+                    foodData.push(healthHistory[dateStr].food);
+                    if(healthHistory[dateStr].potty === '양호') pGood++;
+                    else if(healthHistory[dateStr].potty === '보통') pNormal++;
+                    else if(healthHistory[dateStr].potty === '주의') pBad++;
+                } else {
+                    walkData.push(0); foodData.push(0);
+                }
+            }
+
+            if (lineChartInstance) lineChartInstance.destroy();
+            const ctx1 = document.getElementById('lineChart').getContext('2d');
+            lineChartInstance = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: days,
+                    datasets:[
+                        { label: '산책(분)', data: walkData, borderColor: '#2E7D32', backgroundColor: 'rgba(46,125,50,0.1)', tension: 0.3, fill: true },
+                        { label: '식사량(g)', data: foodData, borderColor: '#A8E6CF', backgroundColor: 'rgba(168,230,207,0.2)', tension: 0.3, fill: true }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            if (doughnutChartInstance) doughnutChartInstance.destroy();
+            const ctx2 = document.getElementById('doughnutChart').getContext('2d');
+            const hasData = (pGood + pNormal + pBad) > 0;
+            doughnutChartInstance = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels:['양호', '보통', '주의'],
+                    datasets:[{
+                        data: hasData ? [pGood, pNormal, pBad] : [1],
+                        backgroundColor: hasData ? ['#90EE90', '#FFD54F', '#EF5350'] : ['#EEEEEE']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        /* --- 투두 리스트 --- */
+        function addTodo() {
+            const input = document.getElementById('todo-input');
+            const text = input.value.trim();
+            if (text !== '') {
+                todos.push({ id: Date.now(), text: text, done: false });
+                localStorage.setItem('petTodos', JSON.stringify(todos));
+                input.value = '';
+                renderTodos();
+            }
+        }
+        function toggleTodo(id) {
+            todos = todos.map(t => { if(t.id === id) t.done = !t.done; return t; });
+            localStorage.setItem('petTodos', JSON.stringify(todos));
+            renderTodos();
+        }
+        function deleteTodo(id) {
+            todos = todos.filter(t => t.id !== id);
+            localStorage.setItem('petTodos', JSON.stringify(todos));
+            renderTodos();
+        }
+        function renderTodos() {
+            const list = document.getElementById('todo-list');
+            list.innerHTML = '';
+            todos.forEach(todo => {
+                const li = document.createElement('li');
+                li.className = `todo-item ${todo.done ? 'done' : ''}`;
+                li.innerHTML = `
+                    <input type="checkbox" ${todo.done ? 'checked' : ''} onclick="toggleTodo(${todo.id})">
+                    <span>${todo.text}</span>
+                    <i class="fa-solid fa-trash delete-btn" onclick="deleteTodo(${todo.id})"></i>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        /* --- 달력 및 일정 --- */
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            document.getElementById('calendar-month-year').innerText = `${year}년 ${month + 1}월`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+            const calendarBody = document.getElementById('calendar-body');
+            calendarBody.innerHTML = '';
+            const today = new Date();
+
+            for (let i = 0; i < firstDay; i++) calendarBody.appendChild(document.createElement('div'));
+
+            for (let i = 1; i <= lastDate; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day';
+                dayDiv.innerHTML = `<span style="display:block; width:100%; text-align:center;">${i}</span>`;
+
+                if (year === today.getFullYear() && month === today.getMonth() && i === today.getDate()) {
+                    dayDiv.classList.add('today');
+                }
+
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                
+                // 여러 개의 일정을 스크롤 가능한 칸 안에 모두 렌더링
+                if (events[dateStr] && events[dateStr].length > 0) {
+                    events[dateStr].forEach(evt => {
+                        const tag = document.createElement('div');
+                        tag.className = 'event-tag';
+                        tag.innerText = evt.text;
+                        dayDiv.appendChild(tag);
+                    });
+                }
+
+                dayDiv.onclick = (e) => {
+                    // 내부 태그 클릭 시에도 부모(칸)의 모달 열기 이벤트 실행
+                    openModal(dateStr, i);
+                };
+                calendarBody.appendChild(dayDiv);
+            }
+        }
+
+        function prevMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
+        function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
+
+        /* --- 일정 모달창 로직 --- */
+        function openModal(dateStr, day) {
+            selectedDateStr = dateStr;
+            const month = currentDate.getMonth() + 1;
+            document.getElementById('modal-date-title').innerText = `${month}월 ${day}일 스케줄`;
+            document.getElementById('event-modal').classList.add('active');
+            
+            // 모달 열 때마다 해당 날짜의 기존 일정 렌더링
+            renderEvents(); 
+            // 포커스를 새 입력창에 줌
+            setTimeout(() => document.getElementById('event-input').focus(), 100); 
+        }
+
+        function closeModal() {
+            document.getElementById('event-modal').classList.remove('active');
+            document.getElementById('event-input').value = '';
+        }
+
+        document.getElementById('event-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        function saveEvent() {
+            const input = document.getElementById('event-input');
+            const text = input.value.trim();
+            if (text) {
+                if (!events[selectedDateStr]) events[selectedDateStr] =[];
+                // 새로운 일정을 배열에 계속 추가 (무제한)
+                events[selectedDateStr].push({ id: Date.now(), text: text });
+                localStorage.setItem('petEvents', JSON.stringify(events));
+                input.value = '';
+                
+                renderEvents();   // 모달창 아래 목록 업데이트
+                renderCalendar(); // 배경 달력 칸 업데이트
+            }
+        }
+
+        function deleteEvent(id) {
+            events[selectedDateStr] = events[selectedDateStr].filter(event => event.id !== id);
+            localStorage.setItem('petEvents', JSON.stringify(events));
+            renderEvents();
+            renderCalendar();
+        }
+
+        function renderEvents() {
+            const list = document.getElementById('event-list');
+            list.innerHTML = '';
+            // 등록된 일정이 없을 경우 안내 문구 표시
+            if (dayEvents.length === 0) {
+                list.innerHTML = '<li style="text-align:center; color:#999; padding: 10px 0; border:none; background:none;">등록된 일정이 없습니다.</li>';
+                return;
+            }
+
+            // 기존 일정들을 리스트로 생성
+            dayEvents.forEach(event => {
+                const li = document.createElement('li');
+                li.className = 'event-item';
+                li.innerHTML = `
+                    <span><i class="fa-solid fa-paw" style="color: var(--main-mint); margin-right: 8px;"></i>${event.text}</span>
+                    <i class="fa-solid fa-trash delete-btn" style="cursor: pointer;" onclick="deleteEvent(${event.id})"></i>
+                `;
+                list.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
